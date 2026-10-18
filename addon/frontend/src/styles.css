@@ -581,6 +581,15 @@ summary {
 .active-override-summary > div { display: grid; gap: 3px; }
 .active-override-summary span { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; }
 .active-override-summary strong { font-size: 0.9rem; }
+.active-override-summary md-text-button {
+  --md-text-button-label-text-color: var(--md-sys-color-on-primary-container);
+  --md-text-button-hover-label-text-color: var(--md-sys-color-on-primary-container);
+  --md-text-button-focus-label-text-color: var(--md-sys-color-on-primary-container);
+  --md-text-button-pressed-label-text-color: var(--md-sys-color-on-primary-container);
+  --md-text-button-disabled-label-text-color: var(--md-sys-color-on-primary-container);
+  --md-text-button-hover-state-layer-color: var(--md-sys-color-on-primary-container);
+  --md-text-button-pressed-state-layer-color: var(--md-sys-color-on-primary-container);
+}
 .override-value-section { display: grid; gap: 10px; }
 .override-option-grid {
   display: grid;
