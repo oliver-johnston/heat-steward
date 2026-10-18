@@ -1,6 +1,6 @@
 name: "Heat Steward"
 description: "Reliable room-by-room heating and hot-water control for SONOFF TRVZB systems"
-version: "0.38.0"
+version: "0.39.0"
 slug: "heat_steward"
 init: false
 stage: experimental
