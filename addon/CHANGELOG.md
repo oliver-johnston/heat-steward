@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.38.0 — 2026-10-18
+
 - Clarified room readiness on the Preheating settings page with a prominent
   red-accented `Disabled | Learning` badge and a compact grid of non-duplicated
   learning evidence and estimates.
