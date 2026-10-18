@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.39.0 — 2026-10-18
+
 - Added the `heat_steward_override` Home Assistant event for timed room,
   room-group, whole-house, and hot-water overrides, including cancellation and
   clearing all active overrides, plus stable climate-entity targeting for
