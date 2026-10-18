@@ -135,7 +135,32 @@ action:
 
 Use `mode: home` to resume weekly room schedules. Away applies the configured
 Away preset—Frost by default—and turns scheduled hot water off. Boosts remain a
-deliberate dashboard action.
+deliberate override.
+
+Automations can also set or clear every override type by firing
+`heat_steward_override`. This example sets a one-hour Comfort override on one
+room. Use the room's stable climate entity ID; Heat Steward resolves it to the
+configured radiator internally.
+
+```yaml
+action:
+  - event: heat_steward_override
+    event_data:
+      channel: temperature
+      scope_type: room
+      scope_id: climate.dining_trv
+      override_mode: preset
+      override_preset: comfort
+      duration_minutes: 60
+```
+
+The same event supports room-group and whole-house preset or custom-temperature
+overrides, timed hot-water On or Off overrides, and cancellation. Set actions
+must include `duration_minutes` (1–10,080); clear actions use `operation: clear`
+and omit the value and duration. Use `operation: clear_all` by itself to clear
+every active temporary override without changing Home/Away mode. See
+[Schedules and overrides](docs/concepts/schedules-and-overrides.md#home-assistant-override-commands)
+for complete payloads.
 
 ## Development
 

@@ -40,14 +40,17 @@ async def run() -> None:
         mode_event_task = asyncio.create_task(
             ha.listen_events("heat_steward_set_mode", controller.handle_mode_event)
         )
+        override_event_task = asyncio.create_task(
+            ha.listen_events("heat_steward_override", controller.handle_override_event)
+        )
         logging.getLogger(__name__).info("Heat Steward UI and controller started")
         try:
-            await asyncio.gather(controller_task, mode_event_task)
+            await asyncio.gather(controller_task, mode_event_task, override_event_task)
         finally:
-            for task in (controller_task, mode_event_task):
+            for task in (controller_task, mode_event_task, override_event_task):
                 if not task.done():
                     task.cancel()
-            for task in (controller_task, mode_event_task):
+            for task in (controller_task, mode_event_task, override_event_task):
                 with contextlib.suppress(asyncio.CancelledError):
                     await task
             await runner.cleanup()

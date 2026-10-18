@@ -5,6 +5,8 @@ from collections.abc import Awaitable, Callable
 from datetime import datetime
 from typing import Any
 
+from pydantic import ValidationError
+
 from .config import ConfigStore, HeatingConfig
 from .control_plan import ControlPlan
 from .overrides import (
@@ -79,6 +81,7 @@ class OverrideService:
     ) -> OverrideState:
         async with self._lock:
             config = self._require_config()
+            request = self._canonicalise_target(config, request)
             self._validate_target(config, request)
             action = self._override_store.record(request, actor, action_id=action_id)
             target = request.scope_id or request.scope_type.replace("_", " ")
@@ -233,6 +236,45 @@ class OverrideService:
         await self._run_control_cycle()
         return self.state()
 
+    async def clear_all(
+        self,
+        *,
+        actor: OverrideActor,
+    ) -> OverrideState:
+        """Clear every active temperature and hot-water override."""
+        async with self._lock:
+            self._require_config()
+            state = self.state()
+            if self._override_store.last_error:
+                raise OSError(self._override_store.last_error)
+            requests = [
+                OverrideActionRequest(
+                    channel="temperature",
+                    scope_type=override.scope_type,
+                    scope_id=override.scope_id,
+                    operation="clear",
+                )
+                for override in state.temperature_overrides
+            ]
+            if state.hot_water_override is not None:
+                requests.append(
+                    OverrideActionRequest(
+                        channel="hot_water",
+                        scope_type="hot_water",
+                        operation="clear",
+                    )
+                )
+            for request in requests:
+                self._override_store.record(request, actor)
+            count = len(requests)
+            noun = "override" if count == 1 else "overrides"
+            self._record_event(
+                "info",
+                f"Cleared {count} active {noun} from {self._actor_label(actor)}",
+            )
+        await self._run_control_cycle()
+        return self.state()
+
     async def handle_mode_event(self, event_data: dict[str, Any]) -> None:
         mode = event_data.get("mode")
         if mode not in {"home", "away"}:
@@ -251,11 +293,94 @@ class OverrideService:
             ),
         )
 
+    async def handle_override_event(self, event_data: dict[str, Any]) -> None:
+        """Apply one validated override command received from Home Assistant."""
+        context = event_data.get("_ha_context")
+        payload = {key: value for key, value in event_data.items() if key != "_ha_context"}
+        actor = OverrideActor(
+            source="Home Assistant automation",
+            user_id=(
+                context.get("user_id")
+                if isinstance(context, dict) and isinstance(context.get("user_id"), str)
+                else None
+            ),
+        )
+        if payload.get("operation") == "clear_all":
+            if payload != {"operation": "clear_all"}:
+                self._record_event(
+                    "warning",
+                    "Ignored heat_steward_override clear_all event with unexpected data",
+                )
+                return
+            try:
+                await self.clear_all(actor=actor)
+            except (OSError, ValueError) as exc:
+                self._record_event(
+                    "warning",
+                    f"Ignored heat_steward_override clear_all event: {exc}",
+                )
+            return
+
+        try:
+            request = OverrideActionRequest.model_validate(payload)
+        except ValidationError as exc:
+            detail = exc.errors(include_url=False, include_context=False)[0]
+            location = ".".join(str(part) for part in detail.get("loc", ()))
+            reason = detail.get("msg", "invalid event data")
+            if location:
+                reason = f"{location}: {reason}"
+            self._record_event(
+                "warning",
+                f"Ignored heat_steward_override event with invalid data ({reason})",
+            )
+            return
+
+        if request.operation == "set" and request.duration_minutes is None:
+            self._record_event(
+                "warning",
+                "Ignored heat_steward_override event because set actions require duration_minutes",
+            )
+            return
+
+        context_id = context.get("id") if isinstance(context, dict) else None
+        action_id = f"ha-event-{context_id}"[:64] if isinstance(context_id, str) else None
+        try:
+            await self.apply(
+                request,
+                actor=actor,
+                action_id=action_id,
+            )
+        except (OSError, ValueError) as exc:
+            self._record_event(
+                "warning",
+                f"Ignored heat_steward_override event: {exc}",
+            )
+
     def _require_config(self) -> HeatingConfig:
         config = self._store.load()
         if config is None:
             raise ValueError("Heating is not configured")
         return config
+
+    @staticmethod
+    def _canonicalise_target(
+        config: HeatingConfig,
+        request: OverrideActionRequest,
+    ) -> OverrideActionRequest:
+        """Store room targets by device ID while accepting stable climate entity IDs."""
+        if request.channel != "temperature" or request.scope_type != "room":
+            return request
+        trv = next(
+            (
+                item
+                for item in config.trvs
+                if request.scope_id in {item.device_id, item.entities.climate}
+            ),
+            None,
+        )
+        if trv is None or request.scope_id == trv.device_id:
+            return request
+        return request.model_copy(update={"scope_id": trv.device_id})
 
     @staticmethod
     def _actor_label(actor: OverrideActor) -> str:

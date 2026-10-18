@@ -581,6 +581,9 @@ async def _serve() -> None:
     mode_event_task = asyncio.create_task(
         client.listen_events("heat_steward_set_mode", controller.handle_mode_event)
     )
+    override_event_task = asyncio.create_task(
+        client.listen_events("heat_steward_override", controller.handle_override_event)
+    )
 
     print(f"\nHeat Steward:       http://127.0.0.1:{heating_port}/")
     print(f"Device simulator:   http://127.0.0.1:{ha_port}/")
@@ -588,9 +591,9 @@ async def _serve() -> None:
     try:
         await asyncio.Event().wait()
     finally:
-        for task in (controller_task, mode_event_task):
+        for task in (controller_task, mode_event_task, override_event_task):
             task.cancel()
-        for task in (controller_task, mode_event_task):
+        for task in (controller_task, mode_event_task, override_event_task):
             with suppress(asyncio.CancelledError):
                 await task
         await heating_runner.cleanup()

@@ -167,8 +167,14 @@ class HeatingController:
     ) -> OverrideState:
         return await self.overrides.cancel_hot_water_boost(actor=actor)
 
+    async def clear_all_overrides(self, *, actor: OverrideActor) -> OverrideState:
+        return await self.overrides.clear_all(actor=actor)
+
     async def handle_mode_event(self, event_data: dict[str, Any]) -> None:
         await self.overrides.handle_mode_event(event_data)
+
+    async def handle_override_event(self, event_data: dict[str, Any]) -> None:
+        await self.overrides.handle_override_event(event_data)
 
     async def preflight(self, config: HeatingConfig | None = None) -> PreflightResult:
         async with self._lock:
