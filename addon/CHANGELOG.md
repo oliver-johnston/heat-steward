@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Added the `heat_steward_override` Home Assistant event for timed room,
+  room-group, whole-house, and hot-water overrides, including cancellation and
+  clearing all active overrides, plus stable climate-entity targeting for
+  individual rooms.
+
 ## 0.38.0 — 2026-10-18
 
 - Clarified room readiness on the Preheating settings page with a prominent

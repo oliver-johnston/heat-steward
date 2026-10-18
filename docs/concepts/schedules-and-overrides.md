@@ -34,6 +34,89 @@ action:
 
 Use `mode: home` to return to schedules.
 
+## Home Assistant override commands
+
+Fire `heat_steward_override` to set or clear an override. Set commands must have
+a duration from 1 to 10,080 minutes (seven days), so a malformed automation
+cannot leave heating or hot water overridden indefinitely. Commands are applied
+immediately and recorded in Diagnostics as coming from a Home Assistant
+automation.
+
+For one room, target its stable climate entity ID rather than Home Assistant's
+internal device ID:
+
+```yaml
+action:
+  - event: heat_steward_override
+    event_data:
+      channel: temperature
+      scope_type: room
+      scope_id: climate.dining_trv
+      override_mode: temperature
+      override_temperature: 22
+      duration_minutes: 30
+```
+
+For a room group, use the exact group name configured in Heat Steward. Change
+`scope_type` to `house` and omit `scope_id` for a whole-house override.
+
+```yaml
+action:
+  - event: heat_steward_override
+    event_data:
+      channel: temperature
+      scope_type: group
+      scope_id: Dining Room
+      override_mode: preset
+      override_preset: comfort
+      duration_minutes: 120
+```
+
+Temperature commands use either `override_mode: preset` with one of `boost`,
+`comfort`, `eco`, or `frost`, or `override_mode: temperature` with
+`override_temperature` from 5–30°C.
+
+Hot water can be forced On or Off for a bounded time:
+
+```yaml
+action:
+  - event: heat_steward_override
+    event_data:
+      channel: hot_water
+      scope_type: hot_water
+      override_mode: on_off
+      on_off: true
+      duration_minutes: 60
+```
+
+To cancel an override, identify the same channel and scope and set
+`operation: clear`. Do not include a value or duration:
+
+```yaml
+action:
+  - event: heat_steward_override
+    event_data:
+      channel: temperature
+      scope_type: room
+      scope_id: climate.dining_trv
+      operation: clear
+```
+
+To clear every active room, group, whole-house, and hot-water override at once,
+send `clear_all` with no other event data. Home/Away mode is not changed:
+
+```yaml
+action:
+  - event: heat_steward_override
+    event_data:
+      operation: clear_all
+```
+
+Events are fire-and-forget in Home Assistant. Heat Steward rejects malformed
+commands, unknown rooms or groups, and hot-water commands when no hot-water relay
+is configured, recording the reason in Recent activity rather than partially
+applying the command.
+
 ## Temporary overrides
 
 An override can apply to one room, one room group, or the whole house. It can

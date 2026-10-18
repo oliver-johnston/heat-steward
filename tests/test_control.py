@@ -399,7 +399,7 @@ def test_latest_applicable_temperature_action_wins_across_scopes(registry_snapsh
     assert plan.rooms[0].override_scope_id == "device-dining"
 
 
-async def test_modes_and_boosts_persist_and_home_assistant_event_only_sets_mode(
+async def test_modes_and_boosts_persist_and_home_assistant_event_sets_mode(
     tmp_path, registry_snapshot
 ):
     config = configured_system(registry_snapshot, enabled=False)
@@ -449,6 +449,192 @@ async def test_modes_and_boosts_persist_and_home_assistant_event_only_sets_mode(
     assert any(event.message == "Hot-water boost ended" for event in restarted.status.events)
     assert any(
         event.message == "Heating mode changed to Away from Home Assistant automation"
+        for event in controller.status.events
+    )
+
+
+async def test_home_assistant_override_event_controls_every_override_scope(
+    tmp_path, registry_snapshot
+):
+    config = configured_system(registry_snapshot, enabled=False)
+    store = ConfigStore(tmp_path / "heat-steward-config.json")
+    store.save(config)
+    controller = HeatingController(RecordingHomeAssistant(registry_snapshot.states), store)
+
+    commands = [
+        {
+            "channel": "temperature",
+            "scope_type": "room",
+            "scope_id": "climate.dining_trv",
+            "override_mode": "temperature",
+            "override_temperature": 22,
+            "duration_minutes": 30,
+        },
+        {
+            "channel": "temperature",
+            "scope_type": "group",
+            "scope_id": "Dining Room",
+            "override_mode": "preset",
+            "override_preset": "comfort",
+            "duration_minutes": 60,
+        },
+        {
+            "channel": "temperature",
+            "scope_type": "house",
+            "override_mode": "preset",
+            "override_preset": "eco",
+            "duration_minutes": 120,
+        },
+        {
+            "channel": "hot_water",
+            "scope_type": "hot_water",
+            "override_mode": "on_off",
+            "on_off": False,
+            "duration_minutes": 30,
+        },
+    ]
+    for index, command in enumerate(commands):
+        await controller.handle_override_event(
+            {
+                **command,
+                "_ha_context": {"id": f"command-{index}", "user_id": "user-1"},
+            }
+        )
+
+    state = controller.get_override_state()
+    assert [
+        (override.scope_type, override.scope_id) for override in state.temperature_overrides
+    ] == [
+        ("room", "device-dining"),
+        ("group", "Dining Room"),
+        ("house", None),
+    ]
+    assert state.temperature_overrides[0].temperature == 22
+    assert state.temperature_overrides[0].actor_user_id == "user-1"
+    assert state.temperature_overrides[0].source == "Home Assistant automation"
+    assert state.hot_water_override is not None
+    assert state.hot_water_override.on is False
+
+    await controller.handle_override_event(
+        {
+            "channel": "temperature",
+            "scope_type": "room",
+            "scope_id": "climate.dining_trv",
+            "operation": "clear",
+            "_ha_context": {"id": "clear-room", "user_id": "user-1"},
+        }
+    )
+
+    state = controller.get_override_state()
+    assert all(override.scope_type != "room" for override in state.temperature_overrides)
+    assert len(controller.override_store.load_ledger().actions) == 5
+
+
+async def test_home_assistant_override_event_rejects_unsafe_or_invalid_commands(
+    tmp_path, registry_snapshot
+):
+    config = configured_system(registry_snapshot, enabled=False)
+    store = ConfigStore(tmp_path / "heat-steward-config.json")
+    store.save(config)
+    controller = HeatingController(RecordingHomeAssistant(registry_snapshot.states), store)
+
+    await controller.handle_override_event(
+        {
+            "channel": "hot_water",
+            "scope_type": "hot_water",
+            "override_mode": "on_off",
+            "on_off": True,
+        }
+    )
+    await controller.handle_override_event(
+        {
+            "channel": "temperature",
+            "scope_type": "room",
+            "scope_id": "climate.unknown",
+            "override_mode": "preset",
+            "override_preset": "boost",
+            "duration_minutes": 30,
+        }
+    )
+    await controller.handle_override_event({"channel": "temperature"})
+
+    assert controller.override_store.load_ledger().actions == []
+    messages = [event.message for event in controller.status.events]
+    assert any("set actions require duration_minutes" in message for message in messages)
+    assert any("Unknown room: climate.unknown" in message for message in messages)
+    assert any("invalid data" in message for message in messages)
+
+
+async def test_home_assistant_override_event_can_clear_all_temporary_overrides(
+    tmp_path, registry_snapshot
+):
+    config = configured_system(registry_snapshot, enabled=False)
+    store = ConfigStore(tmp_path / "heat-steward-config.json")
+    store.save(config)
+    controller = HeatingController(RecordingHomeAssistant(registry_snapshot.states), store)
+    await controller.set_mode("away")
+
+    commands = [
+        {
+            "channel": "temperature",
+            "scope_type": "room",
+            "scope_id": "climate.dining_trv",
+            "override_mode": "preset",
+            "override_preset": "boost",
+            "duration_minutes": 30,
+        },
+        {
+            "channel": "temperature",
+            "scope_type": "group",
+            "scope_id": "Dining Room",
+            "override_mode": "preset",
+            "override_preset": "comfort",
+            "duration_minutes": 60,
+        },
+        {
+            "channel": "hot_water",
+            "scope_type": "hot_water",
+            "override_mode": "on_off",
+            "on_off": True,
+            "duration_minutes": 30,
+        },
+    ]
+    for command in commands:
+        await controller.handle_override_event(command)
+
+    await controller.handle_override_event(
+        {
+            "operation": "clear_all",
+            "_ha_context": {"id": "clear-all", "user_id": "user-1"},
+        }
+    )
+
+    state = controller.get_override_state()
+    assert state.temperature_overrides == []
+    assert state.hot_water_override is None
+    assert state.mode == "away"
+    actions = controller.override_store.load_ledger().actions
+    assert len(actions) == 7
+    assert [action.operation for action in actions[-3:]] == ["clear", "clear", "clear"]
+    assert all(action.actor_user_id == "user-1" for action in actions[-3:])
+    assert any(
+        event.message == "Cleared 3 active overrides from Home Assistant automation"
+        for event in controller.status.events
+    )
+
+
+async def test_clear_all_override_event_rejects_extra_fields(tmp_path, registry_snapshot):
+    config = configured_system(registry_snapshot, enabled=False)
+    store = ConfigStore(tmp_path / "heat-steward-config.json")
+    store.save(config)
+    controller = HeatingController(RecordingHomeAssistant(registry_snapshot.states), store)
+    await controller.start_boost("Dining Room", 30)
+
+    await controller.handle_override_event({"operation": "clear_all", "scope_type": "house"})
+
+    assert len(controller.get_override_state().temperature_overrides) == 1
+    assert any(
+        "clear_all event with unexpected data" in event.message
         for event in controller.status.events
     )
 

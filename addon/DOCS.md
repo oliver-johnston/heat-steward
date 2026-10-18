@@ -195,6 +195,33 @@ action:
 Use `mode: home` to resume schedules. Invalid mode values are ignored and logged
 as warnings.
 
+Home Assistant automations can also set or clear room, group, whole-house, and
+hot-water overrides by firing `heat_steward_override`:
+
+```yaml
+action:
+  - event: heat_steward_override
+    event_data:
+      channel: temperature
+      scope_type: room
+      scope_id: climate.dining_trv
+      override_mode: preset
+      override_preset: comfort
+      duration_minutes: 60
+```
+
+Room targets should use the stable climate entity ID. Group targets use the exact
+Heat Steward group name; whole-house targets use `scope_type: house` with no
+`scope_id`. Use `override_mode: temperature` plus `override_temperature` for a
+custom target. Hot water uses `channel: hot_water`, `scope_type: hot_water`,
+`override_mode: on_off`, and `on_off: true` or `false`.
+
+All set commands require `duration_minutes` from 1 to 10,080. To cancel one,
+identify the same channel and scope, set `operation: clear`, and omit the value
+and duration. Use `operation: clear_all` by itself to clear every active
+temporary override without changing Home/Away mode. Invalid commands are ignored
+and recorded in Recent activity.
+
 ### Temporary overrides
 
 The override button is available for an individual room, room group, the whole
