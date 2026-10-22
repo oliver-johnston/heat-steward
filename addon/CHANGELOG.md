@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.40.0 — 2026-10-22
 
 - Removed residual-rise learning and predictive early shutoff while retaining
   warm-up-based preheating.
