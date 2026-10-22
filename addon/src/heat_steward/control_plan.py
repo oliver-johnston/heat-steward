@@ -71,8 +71,6 @@ class RoomDecision:
     thermal_model_status: str = "disabled"
     heating_rate_c_per_hour: float | None = None
     heating_samples: int = 0
-    residual_rise_c: float | None = None
-    residual_samples: int = 0
     model_confidence: float = 0.0
     predicted_minutes_to_target: float | None = None
 
@@ -299,30 +297,6 @@ def build_control_plan(
         else:
             demand = previous
 
-        if (
-            demand
-            and previous
-            and config.control.predictive_heating_enabled
-            and trv.predictive_heating_enabled
-            and control_source in {"schedule", "preheat"}
-            and compatible_model is not None
-            and compatible_model.heating_ready(at)
-            and compatible_model.residual_ready(at)
-            and compatible_model.heating_rate_c_per_hour is not None
-            and compatible_model.residual_rise_c is not None
-            and current_temperature < desired
-        ):
-            usable_residual = compatible_model.residual_rise_c
-            maximum_rise = (
-                compatible_model.heating_rate_c_per_hour
-                * config.control.maximum_early_stop_seconds
-                / 3600
-            )
-            usable_residual = min(usable_residual, maximum_rise)
-            if usable_residual >= 0.05 and current_temperature + usable_residual >= desired:
-                demand = False
-                predictive_action = "coasting"
-
         command = _rounded_setpoint(
             desired + config.control.heating_offset
             if demand
@@ -404,8 +378,6 @@ def build_control_plan(
                     compatible_model.heating_rate_c_per_hour if compatible_model else None
                 ),
                 heating_samples=compatible_model.heating_samples if compatible_model else 0,
-                residual_rise_c=(compatible_model.residual_rise_c if compatible_model else None),
-                residual_samples=compatible_model.residual_samples if compatible_model else 0,
                 model_confidence=compatible_model.confidence if compatible_model else 0.0,
                 predicted_minutes_to_target=predicted_minutes_to_target,
             )

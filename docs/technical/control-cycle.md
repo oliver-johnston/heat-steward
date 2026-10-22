@@ -23,8 +23,7 @@ For every configured radiator with a schedule, the planner:
 4. checks TRV freshness and availability;
 5. applies compatible predictive preheating when eligible;
 6. calculates demand with hysteresis;
-7. applies predictive early shutoff when eligible;
-8. calculates the TRV setpoint from the effective target and offset.
+7. calculates the TRV setpoint from the effective target and offset.
 
 Unavailable rooms have demand forced off and are excluded from the boiler count.
 

@@ -15,10 +15,10 @@ The offsets change the TRV command, not the displayed room target.
 
 ## A room overshoots after the valve closes
 
-First confirm the measured sensor is placed well. If predictive heating is
-available, enable it for that room and leave **Maximum early shutoff** at the
-default 30 minutes while it proves itself. Reduce the maximum if the room stops
-too soon; increase it cautiously if consistent residual rise remains unused.
+First confirm the measured sensor is placed well and reports often enough while
+the room is warming. A slow sensor can cross the target between reports, leaving
+the controller no opportunity to stop sooner. Reduce hysteresis only if the room
+is starting too cold; it does not compensate for delayed above-target readings.
 
 ## A room is cold at the start of a Comfort period
 

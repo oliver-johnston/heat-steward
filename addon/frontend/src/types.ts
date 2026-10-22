@@ -49,13 +49,9 @@ export type PredictiveModel = {
   status: "learning" | "ready" | "stale";
   ready: boolean;
   heating_ready: boolean;
-  residual_ready: boolean;
   heating_rate_c_per_hour: number | null;
   heating_samples: number;
   heating_updated_at: string | null;
-  residual_rise_c: number | null;
-  residual_samples: number;
-  residual_updated_at: string | null;
   confidence: number;
 };
 
@@ -147,7 +143,6 @@ export type ControlSettings = {
   trv_stale_seconds: number;
   predictive_heating_enabled: boolean;
   maximum_preheat_seconds: number;
-  maximum_early_stop_seconds: number;
 };
 
 export type SafetyState = {
@@ -318,12 +313,10 @@ export type DiagnosticRoom = {
   override_mode: "preset" | "temperature" | null;
   override_scope_type: "house" | "group" | "room" | null;
   override_scope_id: string | null;
-  predictive_action: "preheating" | "coasting" | null;
+  predictive_action: "preheating" | null;
   thermal_model_status: "disabled" | "learning" | "ready" | "stale";
   heating_rate_c_per_hour: number | null;
   heating_samples: number;
-  residual_rise_c: number | null;
-  residual_samples: number;
   model_confidence: number;
   predicted_minutes_to_target: number | null;
   temperature_reason: string;
@@ -416,9 +409,7 @@ export type ControlNumberKey =
   | "external_sensor_stale_minutes"
   | "trv_stale_minutes";
 
-export type PredictiveControlNumberKey =
-  | "maximum_preheat_minutes"
-  | "maximum_early_stop_minutes";
+export type PredictiveControlNumberKey = "maximum_preheat_minutes";
 
 export type ControlValues = Record<ControlNumberKey | PredictiveControlNumberKey, string> & {
   enabled: boolean;

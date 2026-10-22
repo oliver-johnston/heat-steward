@@ -68,17 +68,6 @@ def _room_reasoning(decision: Any, config: HeatingConfig) -> tuple[str, str, str
             "the boiler heat-request count."
         )
         command_reason = "No TRV command is sent while this room is unavailable."
-    elif decision.predictive_action == "coasting":
-        residual = _temperature_label(decision.residual_rise_c or 0)
-        demand_reason = (
-            f"The learned model expects up to {residual} of residual rise, so the valve "
-            "is closing before the measured temperature reaches the target."
-        )
-        command_reason = (
-            f"Predictive coasting uses the effective target ({effective}) minus the "
-            f"{config.control.idle_offset:g}°C idle offset, producing a "
-            f"{_temperature_label(decision.commanded_temperature)} TRV command."
-        )
     elif decision.demand and decision.current_temperature <= lower:
         demand_reason = (
             f"The measured temperature ({_temperature_label(decision.current_temperature)}) "
@@ -328,8 +317,6 @@ def build_diagnostics(
                 "thermal_model_status": decision.thermal_model_status,
                 "heating_rate_c_per_hour": decision.heating_rate_c_per_hour,
                 "heating_samples": decision.heating_samples,
-                "residual_rise_c": decision.residual_rise_c,
-                "residual_samples": decision.residual_samples,
                 "model_confidence": decision.model_confidence,
                 "predicted_minutes_to_target": decision.predicted_minutes_to_target,
                 "temperature_reason": temperature_reason,

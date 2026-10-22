@@ -40,7 +40,7 @@ Useful patterns include:
 - a flat external reading followed by fallback, suggesting a stale sensor;
 - room demand with no boiler-on period, suggesting threshold, anti-cycle, or
   relay trouble;
-- continued rise after demand ends, which explains predictive coasting;
+- continued rise after demand ends, which helps explain room overshoot;
 - repeated rapid demand changes, suggesting hysteresis needs adjustment.
 
 ## Recent activity

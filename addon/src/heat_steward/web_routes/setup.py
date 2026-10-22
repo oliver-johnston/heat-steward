@@ -129,7 +129,7 @@ class SetupRoutes:
                         raise ValueError(
                             "Predictive heating cannot be enabled for "
                             f"{discovered.get('name') or choice.device_id} until enough recent "
-                            "heating and residual-rise information has been gathered with its "
+                            "warm-up information has been gathered with its "
                             "selected temperature sensor"
                         )
             config = materialise_config(selection, discovery_result)

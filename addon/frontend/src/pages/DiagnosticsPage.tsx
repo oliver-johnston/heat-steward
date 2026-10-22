@@ -333,14 +333,6 @@ export function DiagnosticsPage({
                           </dd>
                         </div>
                         <div>
-                          <dt>Learned residual rise</dt>
-                          <dd>
-                            {room.residual_rise_c === null
-                              ? `Learning · ${room.residual_samples} episodes`
-                              : `${room.residual_rise_c.toFixed(2)}°C · ${room.residual_samples} episodes`}
-                          </dd>
-                        </div>
-                        <div>
                           <dt>Prediction</dt>
                           <dd>
                             {room.predicted_minutes_to_target === null

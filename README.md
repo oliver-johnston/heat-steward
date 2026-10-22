@@ -91,15 +91,13 @@ configured heating offset. Once satisfied, it is commanded below the target by
 the idle offset. This lets an external thermometer guide the room while the TRV
 continues using its own internal temperature and remains independently usable.
 
-Optional predictive heating learns each room's warm-up rate and the residual rise
-after its valve closes from successful scheduled cycles. The Preheating settings
-show the estimates and evidence for each room, and only unlock its switch after
-enough recent warm-up and coast observations exist. A master switch controls the
-feature across all selected rooms. Once enabled, it can start
-ahead of a higher scheduled target and close the valve early to coast into that
-target. Predictions are time-capped, ignored for overrides and Away mode, and fall
-back room-by-room to normal hysteresis whenever the model is sparse, stale, or
-unavailable.
+Optional predictive heating learns each room's warm-up rate from successful
+scheduled cycles. The Preheating settings show the estimate and evidence for each
+room, and only unlock its switch after enough recent warm-up observations exist. A
+master switch controls the feature across all selected rooms. Once enabled, it can
+start ahead of a higher scheduled target. Predictions are time-capped, ignored for
+overrides and Away mode, and fall back room-by-room to normal hysteresis whenever
+the model is sparse, stale, or unavailable.
 
 The boiler relay turns on only when the configured number of available rooms are
 requesting heat. Minimum on/off times prevent short cycling. A maximum continuous

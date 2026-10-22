@@ -58,7 +58,7 @@ export function PreheatingSettingsPage({
           <div className="control-fields">
             <ControlSettingRow
               title="Predictive heating"
-              description="Start rooms early for schedule increases and close valves early when residual heat should reach the target."
+              description="Start rooms early for schedule increases using each room’s learned warm-up rate."
             >
               <MdSwitch
                 aria-label="Predictive heating"
@@ -92,8 +92,8 @@ export function PreheatingSettingsPage({
           <header className="control-settings-heading">
             <h3 className="md-typescale-title-large">Rooms</h3>
             <p>
-              A room becomes available after three recent warm-up and three coast episodes
-              using its selected temperature sensor.
+              A room becomes available after three recent warm-up episodes using its selected
+              temperature sensor.
             </p>
           </header>
           <div className="preheating-room-grid">
@@ -146,10 +146,6 @@ export function PreheatingSettingsPage({
                         label="Warm-up episodes"
                         value={episodeEvidence(currentModel?.heating_samples ?? 0)}
                       />
-                      <TechnicalPill
-                        label="Coast episodes"
-                        value={episodeEvidence(currentModel?.residual_samples ?? 0)}
-                      />
                       {currentModel?.heating_rate_c_per_hour != null && (
                         <TechnicalPill
                           label="Warm-up rate"
@@ -160,12 +156,6 @@ export function PreheatingSettingsPage({
                         <TechnicalPill
                           label="Preheat estimate"
                           value={`~${minutesPerDegree} min/°C`}
-                        />
-                      )}
-                      {currentModel?.residual_rise_c != null && (
-                        <TechnicalPill
-                          label="Residual rise"
-                          value={`${currentModel.residual_rise_c.toFixed(2)}°C`}
                         />
                       )}
                     </div>
