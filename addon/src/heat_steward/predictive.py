@@ -15,8 +15,6 @@ REFRESH_INTERVAL = timedelta(hours=1)
 MAX_SAMPLE_GAP = timedelta(minutes=20)
 MIN_HEATING_DURATION = timedelta(minutes=5)
 MAX_HEATING_DURATION = timedelta(hours=4)
-COAST_WINDOW = timedelta(minutes=45)
-MIN_COAST_DURATION = timedelta(minutes=5)
 
 
 @dataclass(frozen=True)
@@ -37,9 +35,6 @@ class RoomThermalModel:
     heating_rate_c_per_hour: float | None = None
     heating_samples: int = 0
     heating_updated_at: datetime | None = None
-    residual_rise_c: float | None = None
-    residual_samples: int = 0
-    residual_updated_at: datetime | None = None
     confidence: float = 0.0
 
     def heating_ready(self, at: datetime) -> bool:
@@ -50,27 +45,16 @@ class RoomThermalModel:
             and at.astimezone(UTC) - self.heating_updated_at <= MODEL_STALE_AFTER
         )
 
-    def residual_ready(self, at: datetime) -> bool:
-        return (
-            self.residual_rise_c is not None
-            and self.residual_samples >= MIN_EPISODES
-            and self.residual_updated_at is not None
-            and at.astimezone(UTC) - self.residual_updated_at <= MODEL_STALE_AFTER
-        )
-
     def status(self, at: datetime) -> str:
-        if self.heating_ready(at) or self.residual_ready(at):
+        if self.heating_ready(at):
             return "ready"
-        newest = max(
-            (value for value in (self.heating_updated_at, self.residual_updated_at) if value),
-            default=None,
-        )
+        newest = self.heating_updated_at
         if newest and at.astimezone(UTC) - newest > MODEL_STALE_AFTER:
             return "stale"
         return "learning"
 
     def actionable(self, at: datetime) -> bool:
-        return self.heating_ready(at) and self.residual_ready(at)
+        return self.heating_ready(at)
 
     def as_dict(self, at: datetime) -> dict[str, Any]:
         return {
@@ -80,16 +64,10 @@ class RoomThermalModel:
             "status": self.status(at),
             "ready": self.actionable(at),
             "heating_ready": self.heating_ready(at),
-            "residual_ready": self.residual_ready(at),
             "heating_rate_c_per_hour": self.heating_rate_c_per_hour,
             "heating_samples": self.heating_samples,
             "heating_updated_at": (
                 self.heating_updated_at.isoformat() if self.heating_updated_at else None
-            ),
-            "residual_rise_c": self.residual_rise_c,
-            "residual_samples": self.residual_samples,
-            "residual_updated_at": (
-                self.residual_updated_at.isoformat() if self.residual_updated_at else None
             ),
             "confidence": self.confidence,
         }
@@ -144,7 +122,7 @@ def learn_room_model(
     *,
     at: datetime,
 ) -> RoomThermalModel:
-    """Learn robust room response estimates from completed heat and coast episodes."""
+    """Learn a robust room heating-rate estimate from completed heating episodes."""
     observations = _normalise_observations(rows)
     if not observations:
         return RoomThermalModel(device_id=device_id)
@@ -177,37 +155,23 @@ def learn_room_model(
     for observation in observations:
         heating = observation.demand and observation.boiler_on is True
         if not heating:
+            # The temperature update that reaches the target also causes demand to close.
+            # Treat that boundary reading as the end of the heating episode so sparse
+            # sensors do not lose their final, often largest, reported rise.
+            if (
+                episode
+                and not observation.demand
+                and observation.observed_at - episode[-1].observed_at <= MAX_SAMPLE_GAP
+            ):
+                episode.append(observation)
             finish_heating()
             continue
         if episode and observation.observed_at - episode[-1].observed_at > MAX_SAMPLE_GAP:
             finish_heating()
         episode.append(observation)
 
-    residual_samples: list[tuple[float, datetime]] = []
-    for index in range(1, len(observations)):
-        previous = observations[index - 1]
-        closed = observations[index]
-        if not previous.demand or previous.boiler_on is not True or closed.demand:
-            continue
-        peak = closed.temperature
-        last = closed
-        for following in observations[index + 1 :]:
-            if following.observed_at - closed.observed_at > COAST_WINDOW:
-                break
-            if following.observed_at - last.observed_at > MAX_SAMPLE_GAP or following.demand:
-                break
-            peak = max(peak, following.temperature)
-            last = following
-        if last.observed_at - closed.observed_at < MIN_COAST_DURATION:
-            continue
-        residual_samples.append((min(2.5, max(0.0, peak - closed.temperature)), last.observed_at))
-
     heating_rate = _robust_weighted_average(heating_samples, at)
-    residual_rise = _robust_weighted_average(residual_samples, at)
-    newest = max(
-        (timestamp for _, timestamp in heating_samples + residual_samples),
-        default=None,
-    )
+    newest = max((timestamp for _, timestamp in heating_samples), default=None)
     recency = (
         0.5
         ** (
@@ -217,7 +181,7 @@ def learn_room_model(
         if newest
         else 0.0
     )
-    evidence = min(1.0, max(len(heating_samples), len(residual_samples)) / 6)
+    evidence = min(1.0, len(heating_samples) / 6)
     return RoomThermalModel(
         device_id=device_id,
         temperature_source=temperature_source,
@@ -226,11 +190,6 @@ def learn_room_model(
         heating_samples=len(heating_samples),
         heating_updated_at=(
             max(timestamp for _, timestamp in heating_samples) if heating_samples else None
-        ),
-        residual_rise_c=residual_rise,
-        residual_samples=len(residual_samples),
-        residual_updated_at=(
-            max(timestamp for _, timestamp in residual_samples) if residual_samples else None
         ),
         confidence=round(evidence * recency, 3),
     )

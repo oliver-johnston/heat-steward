@@ -328,7 +328,6 @@ class ControlSettings(BaseModel):
     trv_stale_seconds: int = Field(default=3600, ge=300, le=86400)
     predictive_heating_enabled: bool = False
     maximum_preheat_seconds: int = Field(default=7200, ge=900, le=14400)
-    maximum_early_stop_seconds: int = Field(default=1800, ge=300, le=3600)
 
 
 class ControlSettingsUpdate(ControlSettings):
@@ -410,7 +409,7 @@ class NotificationSettingsUpdate(BaseModel):
 class HeatingConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    schema_version: int = 9
+    schema_version: int = 10
     updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     boiler_switch: str | None = None
     hot_water_switch: str | None = None
@@ -464,6 +463,11 @@ class HeatingConfig(BaseModel):
             control.setdefault("predictive_heating_enabled", False)
             migrated["control"] = control
             migrated["schema_version"] = 9
+        if schema_version < 10:
+            control = dict(migrated.get("control") or {})
+            control.pop("maximum_early_stop_seconds", None)
+            migrated["control"] = control
+            migrated["schema_version"] = 10
         setup = dict(migrated.get("setup") or {})
         if "boiler" not in setup:
             setup["boiler"] = bool(

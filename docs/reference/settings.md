@@ -52,11 +52,10 @@ protection temperature to supported SONOFF valves.
 | --- | ---: | ---: |
 | Global predictive heating | Off | Master switch for all rooms. |
 | Maximum preheat time | 2 hours | 15 minutes–4 hours |
-| Maximum early shutoff | 30 minutes | 5–60 minutes |
-| Room predictive heating | Off | Available after 3 warm-up and 3 coast episodes. |
+| Room predictive heating | Off | Available after 3 warm-up episodes. |
 
-The two maximums are safety and comfort limits; the learner can choose a shorter
-time. See [Predictive heating](../features/predictive-heating.md).
+The maximum is a safety and comfort limit; the learner can choose a shorter time.
+See [Predictive heating](../features/predictive-heating.md).
 
 ## Presets
 

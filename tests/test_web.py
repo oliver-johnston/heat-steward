@@ -476,7 +476,6 @@ async def test_onboarding_api_discovers_and_saves(
         "failures_before_alert": 2,
         "predictive_heating_enabled": True,
         "maximum_preheat_seconds": 7200,
-        "maximum_early_stop_seconds": 1800,
     }
     next(
         state
@@ -622,9 +621,6 @@ async def test_predictive_heating_is_exposed_and_only_newly_enabled_when_ready(
         heating_rate_c_per_hour=1.2,
         heating_samples=4,
         heating_updated_at=now,
-        residual_rise_c=0.3,
-        residual_samples=3,
-        residual_updated_at=now,
         confidence=0.7,
     )
     controller.thermal_learner = FixedThermalLearner({model.device_id: model})

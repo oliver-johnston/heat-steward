@@ -17,8 +17,10 @@ treated as one continuous series.
 ## Warm-up episodes
 
 A warm-up episode contains consecutive samples where room demand is true and the
-central-heating relay is confirmed on. A gap longer than 20 minutes ends the
-episode.
+central-heating relay is confirmed on. The first reading that closes room demand
+is included as the endpoint when it follows the episode within 20 minutes. This
+captures the final reported rise from sparse sensors instead of assigning it to
+the already-satisfied period. A longer gap ends the episode without that endpoint.
 
 An episode becomes a sample only when:
 
@@ -29,19 +31,9 @@ An episode becomes a sample only when:
 The sample value is total temperature rise divided by total episode duration.
 At least three accepted episodes are needed.
 
-## Coast episodes
-
-A coast episode begins when demand changes from true to false after confirmed
-boiler operation. The learner watches for up to 45 minutes, stopping earlier if
-demand returns or a sample gap exceeds 20 minutes.
-
-An episode must last at least five minutes. Its value is the rise from the
-temperature at closure to the highest later temperature, limited to `2.5°C`.
-Zero rise is valid evidence. At least three accepted episodes are needed.
-
 ## Outlier rejection and recent weighting
 
-For warm-up and coast samples separately, the learner:
+For warm-up samples, the learner:
 
 1. finds the median;
 2. finds the median absolute deviation (MAD);
@@ -51,13 +43,12 @@ For warm-up and coast samples separately, the learner:
 This rejects isolated implausible room responses while allowing a room's normal
 rate to change gradually with weather and building conditions. A regression
 line is not currently used because the controller needs a stable episode-level
-rate and residual estimate, not a detailed curve fitted to every raw point.
+rate, not a detailed curve fitted to every raw point.
 
 ## Readiness, staleness, and confidence
 
-Warm-up and coast estimates each become ready after three samples. An estimate
-is stale when its newest sample is more than 14 days old. Predictive control is
-fully available only when both estimates are ready and fresh.
+The warm-up estimate becomes ready after three samples. It is stale when its
+newest sample is more than 14 days old.
 
 The displayed confidence combines evidence, reaching its maximum evidence score
 at six samples, with recency using a 14-day half-life. Confidence is a diagnostic
@@ -68,11 +59,6 @@ hint; readiness and freshness are the control gates.
 Preheat duration is the temperature deficit divided by the learned warm-up rate,
 plus five minutes for valve movement and cycle timing, limited by the configured
 maximum.
-
-Early shutoff uses the learned residual rise, but limits it to the rise that the
-warm-up rate could produce during the configured maximum early-shutoff time. It
-only closes early when at least `0.05°C` of usable residual rise is expected to
-reach the target.
 
 See [Predictive heating](../features/predictive-heating.md) for the user-facing
 guide.

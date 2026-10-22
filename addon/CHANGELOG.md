@@ -1,6 +1,11 @@
 # Changelog
 
-## Unreleased
+## 0.40.0 — 2026-10-22
+
+- Removed residual-rise learning and predictive early shutoff while retaining
+  warm-up-based preheating.
+- Include the demand-closing temperature reading in the preceding warm-up episode
+  so delayed sensor updates contribute to the learned heating rate.
 
 ## 0.39.0 — 2026-10-18
 

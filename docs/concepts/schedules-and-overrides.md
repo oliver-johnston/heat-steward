@@ -139,6 +139,6 @@ applicable override, Away target, or schedule.
 
 ## Predictive heating and schedules
 
-Predictive heating only prepares for schedule changes to a higher temperature
-and only coasts during schedule-driven control. It never predicts an override or
-Away target. This keeps deliberate temporary actions immediate and predictable.
+Predictive heating only prepares for schedule changes to a higher temperature.
+It never predicts an override or Away target. This keeps deliberate temporary
+actions immediate and predictable.

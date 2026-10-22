@@ -46,7 +46,6 @@ export const DEFAULT_CONTROL: ControlValues = {
   trv_stale_minutes: "60",
   predictive_heating_enabled: false,
   maximum_preheat_minutes: "120",
-  maximum_early_stop_minutes: "30",
 };
 export const ADDON_CONTROL_FIELDS: Array<{
   key: Exclude<ControlNumberKey, "frost_protection_temperature">;
@@ -176,15 +175,6 @@ export const PREHEATING_CONTROL_FIELDS: Array<{
     max: "240",
     step: "5",
   },
-  {
-    key: "maximum_early_stop_minutes",
-    title: "Maximum early shutoff",
-    description: "Limit how far ahead residual radiator heat may satisfy a room.",
-    inputLabel: "Minutes",
-    min: "5",
-    max: "60",
-    step: "5",
-  },
 ];
 export const DEFAULT_NOTIFICATIONS: NotificationValues = {
   enabled: false,
@@ -266,7 +256,6 @@ export function controlValues(settings: ControlSettings | undefined): ControlVal
     trv_stale_minutes: String((settings.trv_stale_seconds ?? 3600) / 60),
     predictive_heating_enabled: settings.predictive_heating_enabled ?? false,
     maximum_preheat_minutes: String((settings.maximum_preheat_seconds ?? 7200) / 60),
-    maximum_early_stop_minutes: String((settings.maximum_early_stop_seconds ?? 1800) / 60),
   };
 }
 
@@ -293,7 +282,6 @@ export function controlPayload(settings: ControlValues) {
     trv_stale_seconds: Number(settings.trv_stale_minutes) * 60,
     predictive_heating_enabled: settings.predictive_heating_enabled,
     maximum_preheat_seconds: Number(settings.maximum_preheat_minutes) * 60,
-    maximum_early_stop_seconds: Number(settings.maximum_early_stop_minutes) * 60,
   };
 }
 
