@@ -29,7 +29,7 @@ def test_config_round_trip_is_versioned_and_atomic(tmp_path, registry_snapshot):
     actual = store.load()
 
     assert actual == expected
-    assert actual.schema_version == 10
+    assert actual.schema_version == 11
     assert actual.presets == TemperaturePresets(boost=23, comfort=21, eco=16, frost=5)
     assert actual.setup == SetupProgress(devices=True, presets=False, schedules=False)
     assert list((tmp_path / "nested").glob("*.tmp")) == []
@@ -50,7 +50,7 @@ def test_config_round_trip_is_versioned_and_atomic(tmp_path, registry_snapshot):
     assert store.load().control.enabled is False
     assert store.load().control.temperature_source == "internal"
     assert store.load().control.away_preset == "frost"
-    assert store.load().control.maximum_boiler_on_seconds == 14400
+    assert store.load().control.maximum_boiler_on_seconds == 172800
     assert store.load().control.command_retries == 2
     assert store.load().control.failures_before_alert == 3
     assert store.load().control.external_sensor_stale_seconds == 5400
@@ -72,7 +72,7 @@ def test_schema_four_default_trv_timeout_is_migrated(registry_snapshot):
 
     migrated = HeatingConfig.model_validate(payload)
 
-    assert migrated.schema_version == 10
+    assert migrated.schema_version == 11
     assert migrated.control.trv_stale_seconds == 3600
 
 
@@ -88,7 +88,7 @@ def test_schema_five_failure_threshold_is_migrated_to_alert_threshold(registry_s
 
     migrated = HeatingConfig.model_validate(payload)
 
-    assert migrated.schema_version == 10
+    assert migrated.schema_version == 11
     assert migrated.control.failures_before_alert == 7
 
 
@@ -106,7 +106,7 @@ def test_schema_seven_global_predictive_setting_migrates_to_safe_room_defaults(
 
     migrated = HeatingConfig.model_validate(payload)
 
-    assert migrated.schema_version == 10
+    assert migrated.schema_version == 11
     assert migrated.trvs[0].predictive_heating_enabled is False
     assert migrated.control.predictive_heating_enabled is False
 
@@ -122,7 +122,7 @@ def test_schema_four_custom_trv_timeout_is_preserved(registry_snapshot):
 
     migrated = HeatingConfig.model_validate(payload)
 
-    assert migrated.schema_version == 10
+    assert migrated.schema_version == 11
     assert migrated.control.trv_stale_seconds == 7200
 
 
@@ -137,8 +137,51 @@ def test_schema_nine_removes_retired_early_stop_setting(registry_snapshot):
 
     migrated = HeatingConfig.model_validate(payload)
 
-    assert migrated.schema_version == 10
+    assert migrated.schema_version == 11
     assert "maximum_early_stop_seconds" not in migrated.control.model_dump()
+
+
+def test_schema_ten_default_maximum_boiler_runtime_is_migrated(registry_snapshot):
+    result = discover(registry_snapshot)
+    request = OnboardingRequest.model_validate(
+        {"trvs": [{"device_id": "device-dining", "room_group": "Dining Room"}]}
+    )
+    payload = materialise_config(request, result).model_dump(mode="json")
+    payload["schema_version"] = 10
+    payload["control"]["maximum_boiler_on_seconds"] = 14400
+
+    migrated = HeatingConfig.model_validate(payload)
+
+    assert migrated.schema_version == 11
+    assert migrated.control.maximum_boiler_on_seconds == 172800
+
+
+def test_schema_ten_custom_maximum_boiler_runtime_is_preserved(registry_snapshot):
+    result = discover(registry_snapshot)
+    request = OnboardingRequest.model_validate(
+        {"trvs": [{"device_id": "device-dining", "room_group": "Dining Room"}]}
+    )
+    payload = materialise_config(request, result).model_dump(mode="json")
+    payload["schema_version"] = 10
+    payload["control"]["maximum_boiler_on_seconds"] = 18000
+
+    migrated = HeatingConfig.model_validate(payload)
+
+    assert migrated.schema_version == 11
+    assert migrated.control.maximum_boiler_on_seconds == 18000
+
+
+def test_maximum_boiler_runtime_accepts_seven_days(registry_snapshot):
+    result = discover(registry_snapshot)
+    request = OnboardingRequest.model_validate(
+        {"trvs": [{"device_id": "device-dining", "room_group": "Dining Room"}]}
+    )
+    payload = materialise_config(request, result).model_dump(mode="json")
+    payload["control"]["maximum_boiler_on_seconds"] = 604800
+
+    config = HeatingConfig.model_validate(payload)
+
+    assert config.control.maximum_boiler_on_seconds == 604800
 
 
 def test_presets_must_descend_from_boost_to_frost():

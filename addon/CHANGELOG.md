@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.41.0 — 2026-11-13
+
+- Raised the maximum continuous boiler runtime default to 48 hours and made it
+  adjustable up to seven days, so sustained winter heating does not trigger a
+  premature safety stop.
+
 ## 0.40.0 — 2026-10-22
 
 - Removed residual-rise learning and predictive early shutoff while retaining
