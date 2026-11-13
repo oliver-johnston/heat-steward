@@ -105,7 +105,7 @@ Important defaults:
 | Idle offset | 2°C | Commands a satisfied TRV below the room target. |
 | Start hysteresis | 0.2°C | Starts demand this far below target; demand stops at target. |
 | Minimum boiler on/off | 5 minutes | Prevents short cycling. |
-| Maximum boiler runtime | 4 hours | Latches a safety stop if continuously exceeded. |
+| Maximum boiler runtime | 48 hours | Latches a safety stop if continuously exceeded. |
 | Command retries | 2 | Retries commands that Home Assistant does not confirm. |
 | External sensor stale time | 90 minutes | Falls back to the TRV sensor after this period. |
 | TRV stale time | 60 minutes | Marks a quiet valve as not recently seen. |

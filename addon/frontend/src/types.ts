@@ -403,7 +403,7 @@ export type ControlNumberKey =
   | "frost_protection_temperature"
   | "minimum_boiler_on_minutes"
   | "minimum_boiler_off_minutes"
-  | "maximum_boiler_on_minutes"
+  | "maximum_boiler_on_hours"
   | "command_retries"
   | "failures_before_alert"
   | "external_sensor_stale_minutes"

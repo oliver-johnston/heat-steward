@@ -36,7 +36,7 @@ tab, after the room has enough evidence.
 | Away preset | Frost | Any preset |
 | Minimum boiler on time | 5 minutes | 0–60 minutes |
 | Minimum boiler off time | 5 minutes | 0–60 minutes |
-| Maximum boiler runtime | 4 hours | 5 minutes–6 hours |
+| Maximum boiler runtime | 48 hours | 5 minutes–7 days |
 | Command retries | 2 | 0–5 |
 | Failures before alert | 3 | 1–10 |
 | External sensor stale time | 90 minutes | 5 minutes–24 hours |
